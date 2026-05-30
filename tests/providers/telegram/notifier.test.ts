@@ -1,5 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TelegramNotifier } from '../../../src/providers/telegram/notifier.js';
+
+const telegrafMock = vi.hoisted(() => {
+  const sendMessage = vi.fn().mockResolvedValue({ message_id: 1 });
+  const Telegraf = vi.fn(function Telegraf() {
+    return { telegram: { sendMessage } };
+  });
+  return { Telegraf, sendMessage };
+});
+
+vi.mock('telegraf', () => ({
+  Telegraf: telegrafMock.Telegraf,
+}));
+
+import {
+  createTelegrafAdapter,
+  TelegramNotifier,
+} from '../../../src/providers/telegram/notifier.js';
 
 describe('TelegramNotifier', () => {
   it('sends message through telegraf telegram API', async () => {
@@ -72,5 +88,34 @@ describe('TelegramNotifier', () => {
       'fghij',
       'kl',
     ]);
+  });
+
+  it('splits a long line after flushing the current chunk', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ message_id: 1 });
+    const notifier = new TelegramNotifier({
+      botToken: '123456:telegram-token',
+      chatId: '42',
+      bot: { telegram: { sendMessage } },
+      maxMessageLength: 5,
+    });
+
+    await notifier.send('ab\ncdefgh');
+
+    expect(sendMessage.mock.calls.map((call: unknown[]) => String(call[1]))).toEqual([
+      'ab',
+      'cdefg',
+      'h',
+    ]);
+  });
+
+  it('creates a telegraf adapter with disabled link preview', async () => {
+    const adapter = createTelegrafAdapter('123456:telegram-token');
+
+    await adapter.telegram.sendMessage('42', 'hello', { disable_web_page_preview: true });
+
+    expect(telegrafMock.Telegraf).toHaveBeenCalledWith('123456:telegram-token');
+    expect(telegrafMock.sendMessage).toHaveBeenCalledWith('42', 'hello', {
+      link_preview_options: { is_disabled: true },
+    });
   });
 });

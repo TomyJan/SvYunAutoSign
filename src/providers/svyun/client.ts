@@ -43,7 +43,6 @@ export class SvyunClient implements SvyunClientLike {
   private jwt: string | undefined;
 
   constructor(options: SvyunClientOptions) {
-    /* v8 ignore next -- production got client wiring is excluded from unit coverage. */
     this.http = options.http ?? createGotClient(options, () => this.jwt);
   }
 
@@ -118,8 +117,10 @@ export function encryptPassword(password: string): string {
   return Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]).toString('base64');
 }
 
-/* v8 ignore next 29 -- got/tough-cookie wiring is verified by integration usage, not unit-tested with real network. */
-function createGotClient(options: SvyunClientOptions, getJwt: () => string | undefined): Got {
+export function createGotClient(
+  options: SvyunClientOptions,
+  getJwt: () => string | undefined,
+): Got {
   return got.extend({
     prefixUrl: `${options.baseUrl.replace(/\/$/, '')}/console/v1`,
     cookieJar: new CookieJar(),

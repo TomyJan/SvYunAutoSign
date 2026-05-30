@@ -34,12 +34,27 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Export configured secrets
+        env:
+          ACTION_SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const allowed = /^(TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID|SVYUN_(DISPLAYNAME|USERNAME|PASSWORD)_[A-Za-z0-9_]+)$/;
+          const secrets = JSON.parse(process.env.ACTION_SECRETS_JSON || '{}');
+          const lines = [];
+
+          for (const [key, value] of Object.entries(secrets).sort(([left], [right]) => left.localeCompare(right))) {
+            if (!allowed.test(key) || value === '') continue;
+            const delimiter = `SVYUN_${key}_EOF`;
+            lines.push(`${key}<<${delimiter}`);
+            lines.push(String(value));
+            lines.push(delimiter);
+          }
+
+          fs.appendFileSync(process.env.GITHUB_ENV, `${lines.join('\n')}\n`);
+          NODE
+
       - name: Run SvYun auto sign
         run: pnpm start
-        env:
-          # 按需复制下面三行并替换后缀 MAIN，即可添加更多账号。
-          SVYUN_DISPLAYNAME_MAIN: ${{ secrets.SVYUN_DISPLAYNAME_MAIN }}
-          SVYUN_USERNAME_MAIN: ${{ secrets.SVYUN_USERNAME_MAIN }}
-          SVYUN_PASSWORD_MAIN: ${{ secrets.SVYUN_PASSWORD_MAIN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

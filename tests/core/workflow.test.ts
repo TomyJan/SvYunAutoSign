@@ -85,8 +85,11 @@ describe('runAccountsWorkflow', () => {
 
   it('records non-error thrown values as failed account messages', async () => {
     const runner = {
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-      run: vi.fn(() => Promise.reject('plain failure')),
+      run: vi.fn(async () => {
+        await Promise.resolve();
+        const plainFailure = 'plain failure' as unknown as Error;
+        throw plainFailure;
+      }),
     };
 
     const result = await runAccountsWorkflow([accounts[0]!], runner);

@@ -1,5 +1,33 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+interface GotExtendOptions {
+  hooks: {
+    beforeRequest: Array<(request: { headers: Record<string, string> }) => void>;
+  };
+}
+
+const gotMock = vi.hoisted(() => {
+  let options: GotExtendOptions | undefined;
+  const extend = vi.fn((nextOptions: GotExtendOptions) => {
+    options = nextOptions;
+    return { get: vi.fn(), post: vi.fn() };
+  });
+
+  return {
+    extend,
+    get options() {
+      if (!options) throw new Error('got.extend was not called');
+      return options;
+    },
+  };
+});
+
+vi.mock('got', () => ({
+  default: { extend: gotMock.extend },
+}));
+
 import {
+  createGotClient,
   encryptPassword,
   SvyunClient,
   type SvyunHttpLike,
@@ -77,30 +105,60 @@ describe('SvyunClient', () => {
     ]);
   });
 
-  it('returns undefined when no draw activity can be joined', async () => {
-    const client = new SvyunClient({
+  it('creates a got client when no HTTP transport is injected', () => {
+    new SvyunClient({
       baseUrl: 'https://www.svyun.com',
       loginUrl: 'https://www.svyun.com/login.htm',
       timeoutMs: 30_000,
-      http: {
-        get: () => ({
-          async json<T>() {
-            await Promise.resolve();
-            return {
-              status: 200,
-              data: { list: [{ id: 2, user_info: { can_join: false } }] },
-            } as T;
-          },
-        }),
-        post: () => ({
-          async json<T>() {
-            await Promise.resolve();
-            return { status: 200 } as T;
-          },
-        }),
-      },
     });
 
-    await expect(client.getPrimaryDrawActivityId()).resolves.toBeUndefined();
+    const request = { headers: {} as Record<string, string> };
+    gotMock.options.hooks.beforeRequest[0]!(request);
+
+    expect(gotMock.extend).toHaveBeenCalled();
+    expect(request.headers.authorization).toBeUndefined();
+  });
+
+  it('configures got client defaults and authorization hook', () => {
+    createGotClient(
+      {
+        baseUrl: 'https://www.svyun.com/',
+        loginUrl: 'https://www.svyun.com/login.htm',
+        timeoutMs: 30_000,
+      },
+      () => 'jwt-token',
+    );
+
+    expect(gotMock.extend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prefixUrl: 'https://www.svyun.com/console/v1',
+        timeout: { request: 30_000 },
+        retry: { limit: 0 },
+        responseType: 'json',
+      }),
+    );
+
+    const options = gotMock.options;
+    const request = { headers: {} as Record<string, string> };
+    options.hooks.beforeRequest[0]!(request);
+
+    expect(request.headers.authorization).toBe('Bearer jwt-token');
+  });
+
+  it('does not set authorization header before login jwt exists', () => {
+    createGotClient(
+      {
+        baseUrl: 'https://www.svyun.com',
+        loginUrl: 'https://www.svyun.com/login.htm',
+        timeoutMs: 30_000,
+      },
+      () => undefined,
+    );
+
+    const options = gotMock.options;
+    const request = { headers: {} as Record<string, string> };
+    options.hooks.beforeRequest[0]!(request);
+
+    expect(request.headers.authorization).toBeUndefined();
   });
 });

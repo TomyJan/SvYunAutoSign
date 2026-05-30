@@ -68,20 +68,7 @@ SVYUN_PASSWORD_ALT_01=password2
 
 默认业务工作流每天北京时间约 08:15 运行，也可以在 Actions 页面手动点击 `Run workflow`。
 
-> 注意：GitHub Actions 不能自动把所有 Secrets 批量注入为环境变量。新增账号后，需要在 [auto-sign.yml](.github/workflows/auto-sign.yml) 的 `env` 中复制一组三元组映射，并把后缀改成你的账号 ID。
-
-示例：
-
-```yaml
-env:
-  SVYUN_DISPLAYNAME_MAIN: ${{ secrets.SVYUN_DISPLAYNAME_MAIN }}
-  SVYUN_USERNAME_MAIN: ${{ secrets.SVYUN_USERNAME_MAIN }}
-  SVYUN_PASSWORD_MAIN: ${{ secrets.SVYUN_PASSWORD_MAIN }}
-
-  SVYUN_DISPLAYNAME_ALT_01: ${{ secrets.SVYUN_DISPLAYNAME_ALT_01 }}
-  SVYUN_USERNAME_ALT_01: ${{ secrets.SVYUN_USERNAME_ALT_01 }}
-  SVYUN_PASSWORD_ALT_01: ${{ secrets.SVYUN_PASSWORD_ALT_01 }}
-```
+新增账号时，只需要在 GitHub Secrets 中新增一组三元组。workflow 会自动导出所有匹配 `SVYUN_DISPLAYNAME_<ID>`、`SVYUN_USERNAME_<ID>`、`SVYUN_PASSWORD_<ID>` 的 Secrets，不需要修改 [auto-sign.yml](.github/workflows/auto-sign.yml)。
 
 ## 本地运行
 
