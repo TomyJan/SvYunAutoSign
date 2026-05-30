@@ -27,14 +27,38 @@ const result: WorkflowResult = {
 };
 
 describe('formatTelegramMessage', () => {
-  it('formats all account results as plain text', () => {
-    const message = formatTelegramMessage(result);
+  it('formats all account results with Chinese labels and readable layout', () => {
+    expect(formatTelegramMessage(result)).toBe(
+      [
+        '📋 速维云自动签到结果',
+        '',
+        '状态：❌ 部分失败',
+        '',
+        '👤 主号（m***@example.com）',
+        '├ ✅ 登录：登录成功',
+        '├ ✅ 签到：签到成功',
+        '└ ⏭️ 抽奖：无可用抽奖次数',
+        '',
+        '👤 小号（a***@example.com）',
+        '└ ❌ 登录：账号或密码错误',
+      ].join('\n'),
+    );
+  });
 
-    expect(message).toContain('速维云自动签到结果：部分失败');
-    expect(message).toContain('主号（m***@example.com）');
-    expect(message).toContain('✅ login：登录成功');
-    expect(message).toContain('⏭️ draw：无可用抽奖次数');
-    expect(message).toContain('小号（a***@example.com）');
-    expect(message).toContain('❌ login：账号或密码错误');
+  it('keeps unknown stage names unchanged', () => {
+    expect(
+      formatTelegramMessage({
+        success: true,
+        accounts: [
+          {
+            accountId: 'MAIN',
+            accountName: '主号',
+            usernameMasked: 'm***@example.com',
+            success: true,
+            stages: [{ name: 'custom', success: true, message: '自定义阶段完成' }],
+          },
+        ],
+      }),
+    ).toContain('└ ✅ custom：自定义阶段完成');
   });
 });

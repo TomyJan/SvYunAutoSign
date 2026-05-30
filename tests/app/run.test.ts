@@ -25,7 +25,8 @@ describe('runApp', () => {
     await runApp({ workflow, notifier });
 
     expect(workflow).toHaveBeenCalledOnce();
-    expect(send).toHaveBeenCalledWith(expect.stringContaining('速维云自动签到结果：全部成功'));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('📋 速维云自动签到结果'));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('状态：✅ 全部成功'));
   });
 
   it('throws detailed account failure after sending notification', async () => {
