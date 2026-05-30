@@ -1,0 +1,45 @@
+name: SvYun Auto Sign
+
+on:
+  schedule:
+    # GitHub Actions 使用 UTC；这里约等于北京时间 08:15。
+    - cron: '15 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  auto-sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run SvYun auto sign
+        run: pnpm start
+        env:
+          # 按需复制下面三行并替换后缀 MAIN，即可添加更多账号。
+          SVYUN_DISPLAYNAME_MAIN: ${{ secrets.SVYUN_DISPLAYNAME_MAIN }}
+          SVYUN_USERNAME_MAIN: ${{ secrets.SVYUN_USERNAME_MAIN }}
+          SVYUN_PASSWORD_MAIN: ${{ secrets.SVYUN_PASSWORD_MAIN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
