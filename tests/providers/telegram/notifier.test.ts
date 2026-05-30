@@ -38,4 +38,39 @@ describe('TelegramNotifier', () => {
 
     await expect(notifier.send('hello')).rejects.not.toThrow(/123456:telegram-token/);
   });
+
+  it('splits multiline messages on line boundaries', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ message_id: 1 });
+    const notifier = new TelegramNotifier({
+      botToken: '123456:telegram-token',
+      chatId: '42',
+      bot: { telegram: { sendMessage } },
+      maxMessageLength: 8,
+    });
+
+    await notifier.send('aa\nbb\ncccccccc');
+
+    expect(sendMessage.mock.calls.map((call: unknown[]) => String(call[1]))).toEqual([
+      'aa\nbb',
+      'cccccccc',
+    ]);
+  });
+
+  it('splits a single long line when it exceeds the limit', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ message_id: 1 });
+    const notifier = new TelegramNotifier({
+      botToken: '123456:telegram-token',
+      chatId: '42',
+      bot: { telegram: { sendMessage } },
+      maxMessageLength: 5,
+    });
+
+    await notifier.send('abcdefghijkl');
+
+    expect(sendMessage.mock.calls.map((call: unknown[]) => String(call[1]))).toEqual([
+      'abcde',
+      'fghij',
+      'kl',
+    ]);
+  });
 });

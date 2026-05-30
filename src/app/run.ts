@@ -1,23 +1,29 @@
 import type { NotificationProvider } from '../core/notification.js';
 import type { WorkflowResult } from '../core/task.js';
+import { redactSensitive } from '../infra/redact.js';
 import { formatTelegramMessage } from '../providers/telegram/messageFormatter.js';
 
 export interface RunAppDependencies {
   workflow(): Promise<WorkflowResult>;
   notifier: NotificationProvider;
+  secrets?: readonly string[];
 }
 
 export async function runApp(dependencies: RunAppDependencies): Promise<void> {
   try {
     const result = await dependencies.workflow();
-    await dependencies.notifier.send(formatTelegramMessage(result));
+    await dependencies.notifier.send(
+      redactSensitive(formatTelegramMessage(result), dependencies.secrets),
+    );
 
     if (!result.success) {
       throw new Error('部分账号执行失败');
     }
   } catch (error) {
     if (isWorkflowFailureBeforeNotification(error)) {
-      await dependencies.notifier.send(formatFailureMessage(error));
+      await dependencies.notifier.send(
+        redactSensitive(formatFailureMessage(error), dependencies.secrets),
+      );
     }
     throw error;
   }

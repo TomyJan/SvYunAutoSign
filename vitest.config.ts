@@ -5,7 +5,6 @@ export default defineConfig({
     environment: 'node',
     restoreMocks: true,
     clearMocks: true,
-    passWithNoTests: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -56,6 +56,29 @@ describe('runApp', () => {
     await expect(runApp({ workflow, notifier })).rejects.toThrow(/tg down/);
   });
 
+  it('redacts configured secrets before sending notifications', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue({
+      success: false,
+      accounts: [
+        {
+          accountId: 'MAIN',
+          accountName: '主号',
+          usernameMasked: 'm***@example.com',
+          success: false,
+          stages: [{ name: 'login', success: false, message: 'password=qwer123456' }],
+        },
+      ],
+    });
+
+    await expect(runApp({ workflow, notifier, secrets: ['qwer123456'] })).rejects.toThrow(
+      /部分账号执行失败/,
+    );
+
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('password=***'));
+  });
+
   it('sends string failure notification when workflow throws a non-error value', async () => {
     const send = vi.fn().mockResolvedValue(undefined);
     const notifier: NotificationProvider = { name: 'telegram', send };

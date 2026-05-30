@@ -9,6 +9,7 @@ import type { WorkflowResult } from '../core/task.js';
 export interface AppDependencies {
   workflow(): Promise<WorkflowResult>;
   notifier: NotificationProvider;
+  secrets: readonly string[];
 }
 
 export function createApp(env: NodeJS.ProcessEnv = process.env): AppDependencies {
@@ -25,5 +26,10 @@ export function createApp(env: NodeJS.ProcessEnv = process.env): AppDependencies
   return {
     workflow: () => runAccountsWorkflow(config.svyun.accounts, runner),
     notifier: new TelegramNotifier(config.telegram),
+    secrets: [
+      config.telegram.botToken,
+      config.telegram.chatId,
+      ...config.svyun.accounts.flatMap((account) => [account.username, account.password]),
+    ],
   };
 }

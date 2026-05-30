@@ -15,7 +15,6 @@
 - got + tough-cookie
 - telegraf
 - zod
-- pino
 - ESLint + Prettier
 - simple-git-hooks + lint-staged
 
