@@ -17,7 +17,7 @@ export async function runApp(dependencies: RunAppDependencies): Promise<void> {
     );
 
     if (!result.success) {
-      throw new Error('部分账号执行失败');
+      throw new Error(formatWorkflowFailureMessage(result));
     }
   } catch (error) {
     if (isWorkflowFailureBeforeNotification(error)) {
@@ -30,7 +30,21 @@ export async function runApp(dependencies: RunAppDependencies): Promise<void> {
 }
 
 function isWorkflowFailureBeforeNotification(error: unknown): boolean {
-  return !(error instanceof Error && error.message === '部分账号执行失败');
+  return !(error instanceof Error && error.message.startsWith('部分账号执行失败'));
+}
+
+function formatWorkflowFailureMessage(result: WorkflowResult): string {
+  const failures = result.accounts
+    .filter((account) => !account.success)
+    .map((account) => {
+      const failedStages = account.stages
+        .filter((stage) => !stage.success)
+        .map((stage) => `${stage.name}：${stage.message}`)
+        .join('；');
+      return `- ${account.accountName}（${account.usernameMasked}）：${failedStages || '未知错误'}`;
+    });
+
+  return ['部分账号执行失败', ...failures].join('\n');
 }
 
 function formatFailureMessage(error: unknown): string {

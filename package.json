@@ -28,12 +28,6 @@
     "*.{json,md,yml,yaml,ts,js,cjs,mjs}": "prettier --write",
     "*.ts": "eslint --fix"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "simple-git-hooks"
-    ]
-  },
   "dependencies": {
     "got": "latest",
     "telegraf": "latest",

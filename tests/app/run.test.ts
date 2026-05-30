@@ -28,13 +28,48 @@ describe('runApp', () => {
     expect(send).toHaveBeenCalledWith(expect.stringContaining('SvYun 自动签到结果：全部成功'));
   });
 
-  it('throws when workflow has account failures after sending notification', async () => {
+  it('throws detailed account failure after sending notification', async () => {
     const send = vi.fn().mockResolvedValue(undefined);
     const notifier: NotificationProvider = { name: 'telegram', send };
-    const workflow = vi.fn().mockResolvedValue({ ...successResult, success: false });
+    const workflow = vi.fn().mockResolvedValue({
+      success: false,
+      accounts: [
+        {
+          accountId: 'MAIN',
+          accountName: '主号',
+          usernameMasked: 'm***@example.com',
+          success: false,
+          stages: [
+            { name: 'login', success: true, message: '登录成功' },
+            { name: 'sign', success: false, message: '签到失败' },
+          ],
+        },
+      ],
+    });
 
-    await expect(runApp({ workflow, notifier })).rejects.toThrow(/部分账号执行失败/);
+    await expect(runApp({ workflow, notifier })).rejects.toThrow(
+      /部分账号执行失败[\s\S]*主号[\s\S]*sign：签到失败/,
+    );
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it('includes unknown error when failed account has no failed stage', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue({
+      success: false,
+      accounts: [
+        {
+          accountId: 'MAIN',
+          accountName: '主号',
+          usernameMasked: 'm***@example.com',
+          success: false,
+          stages: [{ name: 'login', success: true, message: '登录成功' }],
+        },
+      ],
+    });
+
+    await expect(runApp({ workflow, notifier })).rejects.toThrow(/主号[\s\S]*未知错误/);
   });
 
   it('sends failure notification when workflow throws', async () => {
