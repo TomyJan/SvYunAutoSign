@@ -82,4 +82,15 @@ describe('runAccountsWorkflow', () => {
     });
     expect(result.accounts[1]).toMatchObject({ accountId: 'ALT', success: true });
   });
+
+  it('records non-error thrown values as failed account messages', async () => {
+    const runner = {
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      run: vi.fn(() => Promise.reject('plain failure')),
+    };
+
+    const result = await runAccountsWorkflow([accounts[0]!], runner);
+
+    expect(result.accounts[0]?.stages[0]?.message).toBe('plain failure');
+  });
 });

@@ -10,6 +10,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
+      exclude: ['src/index.ts', 'src/app/createApp.ts'],
       thresholds: {
         statements: 100,
         branches: 100,

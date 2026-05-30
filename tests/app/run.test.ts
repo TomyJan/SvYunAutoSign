@@ -55,4 +55,13 @@ describe('runApp', () => {
 
     await expect(runApp({ workflow, notifier })).rejects.toThrow(/tg down/);
   });
+
+  it('sends string failure notification when workflow throws a non-error value', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockRejectedValue('string boom');
+
+    await expect(runApp({ workflow, notifier })).rejects.toBe('string boom');
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('string boom'));
+  });
 });

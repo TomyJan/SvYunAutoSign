@@ -87,4 +87,68 @@ describe('svyun mapper', () => {
       message: '恭喜您抽中：10元无门槛优惠码',
     });
   });
+
+  it('maps fallback messages and non-winning draw responses', () => {
+    expect(mapLoginResult({ status: 200, data: {} })).toEqual({
+      success: false,
+      message: '登录失败',
+    });
+    expect(mapSignInfo({ status: 200, data: { info: { today_checked: false } } })).toEqual({
+      alreadySigned: false,
+      message: '今日未签到',
+    });
+    expect(mapSignResult({ status: 409, msg: '今日已签到' })).toEqual({
+      success: true,
+      alreadySigned: true,
+      message: '今日已签到',
+    });
+    expect(mapDrawResult({ status: 200, msg: '成功', data: { is_win: false } })).toEqual({
+      success: true,
+      skipped: false,
+      isWin: false,
+      message: '成功',
+    });
+    expect(mapDrawResult({ status: 400 })).toEqual({
+      success: false,
+      skipped: false,
+      isWin: false,
+      message: '抽奖失败',
+    });
+    expect(
+      mapDrawResult({ status: 200, data: { is_win: false, prize: { name: '谢谢参与' } } }),
+    ).toEqual({
+      success: true,
+      skipped: false,
+      isWin: false,
+      prizeName: '谢谢参与',
+      message: '谢谢参与',
+    });
+    expect(mapDrawTimes({ status: 200 })).toEqual({
+      available: false,
+      availableTimes: 0,
+      usedTimes: 0,
+      message: '无可用抽奖次数',
+    });
+    expect(mapLoginResult({ status: 200, data: { jwt: 'token' } })).toEqual({
+      success: true,
+      message: '登录成功',
+      jwt: 'token',
+    });
+    expect(mapSignResult({ status: 200 })).toEqual({
+      success: true,
+      alreadySigned: false,
+      message: '签到成功',
+    });
+    expect(mapSignResult({ status: 500 })).toEqual({
+      success: false,
+      alreadySigned: false,
+      message: '签到失败',
+    });
+    expect(mapDrawResult({ status: 200, data: { is_win: false } })).toEqual({
+      success: true,
+      skipped: false,
+      isWin: false,
+      message: '抽奖完成',
+    });
+  });
 });

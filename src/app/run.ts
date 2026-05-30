@@ -24,7 +24,7 @@ export async function runApp(dependencies: RunAppDependencies): Promise<void> {
 }
 
 function isWorkflowFailureBeforeNotification(error: unknown): boolean {
-  return error instanceof Error && error.message !== '部分账号执行失败';
+  return !(error instanceof Error && error.message === '部分账号执行失败');
 }
 
 function formatFailureMessage(error: unknown): string {

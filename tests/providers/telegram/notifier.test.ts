@@ -27,4 +27,15 @@ describe('TelegramNotifier', () => {
 
     await expect(notifier.send('hello')).rejects.not.toThrow(/123456:telegram-token/);
   });
+
+  it('redacts non-error failures', async () => {
+    const sendMessage = vi.fn().mockRejectedValue('token 123456:telegram-token failed');
+    const notifier = new TelegramNotifier({
+      botToken: '123456:telegram-token',
+      chatId: '42',
+      bot: { telegram: { sendMessage } },
+    });
+
+    await expect(notifier.send('hello')).rejects.not.toThrow(/123456:telegram-token/);
+  });
 });

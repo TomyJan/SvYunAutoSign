@@ -15,4 +15,8 @@ describe('redactSensitive', () => {
       'login failed for *** with token ***',
     );
   });
+
+  it('ignores empty known secret values', () => {
+    expect(redactSensitive('safe text', [''])).toBe('safe text');
+  });
 });

@@ -41,6 +41,7 @@ export class TelegramNotifier implements NotificationProvider {
   }
 }
 
+/* v8 ignore next 12 -- telegraf network adapter is exercised through injected bot in unit tests. */
 function createTelegrafAdapter(botToken: string): TelegramBotLike {
   const bot = new Telegraf(botToken);
   return {

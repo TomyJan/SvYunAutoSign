@@ -88,4 +88,48 @@ describe('SvyunAccountTaskRunner', () => {
     expect(client.getSignInfo).not.toHaveBeenCalled();
     expect(result.stages).toEqual([{ name: 'login', success: false, message: '账号或密码错误' }]);
   });
+
+  it('stops when sign fails', async () => {
+    const client = {
+      login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
+      getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: false, message: '未签' }),
+      sign: vi
+        .fn()
+        .mockResolvedValue({ success: false, alreadySigned: false, message: '签到失败' }),
+      getPrimaryDrawActivityId: vi.fn(),
+      getDrawTimes: vi.fn(),
+      draw: vi.fn(),
+    };
+
+    const result = await new SvyunAccountTaskRunner(() => client).run(account);
+
+    expect(result.success).toBe(false);
+    expect(client.getPrimaryDrawActivityId).not.toHaveBeenCalled();
+    expect(result.stages).toEqual([
+      { name: 'login', success: true, message: '登录成功' },
+      { name: 'sign', success: false, message: '签到失败', skipped: false },
+    ]);
+  });
+
+  it('skips draw when no activity is available', async () => {
+    const client = {
+      login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
+      getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: false, message: '未签' }),
+      sign: vi.fn().mockResolvedValue({ success: true, alreadySigned: false, message: '签到成功' }),
+      getPrimaryDrawActivityId: vi.fn().mockResolvedValue(undefined),
+      getDrawTimes: vi.fn(),
+      draw: vi.fn(),
+    };
+
+    const result = await new SvyunAccountTaskRunner(() => client).run(account);
+
+    expect(result.success).toBe(true);
+    expect(client.getDrawTimes).not.toHaveBeenCalled();
+    expect(result.stages.at(-1)).toEqual({
+      name: 'draw',
+      success: true,
+      message: '没有可参与的抽奖活动',
+      skipped: true,
+    });
+  });
 });

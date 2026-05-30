@@ -19,46 +19,32 @@ import {
   mapSignResult,
 } from './mapper.js';
 
+export interface SvyunHttpResponse {
+  json<T>(): Promise<T>;
+}
+
+export interface SvyunHttpLike {
+  get(path: string, options?: unknown): SvyunHttpResponse;
+  post(path: string, options?: unknown): SvyunHttpResponse;
+}
+
 export interface SvyunClientOptions {
   baseUrl: string;
   loginUrl: string;
   timeoutMs: number;
+  http?: SvyunHttpLike;
 }
 
 const AES_KEY = 'idcsmart.finance';
 const AES_IV = '9311019310287172';
 
 export class SvyunClient implements SvyunClientLike {
-  private readonly http: Got;
+  private readonly http: SvyunHttpLike;
   private jwt: string | undefined;
 
   constructor(options: SvyunClientOptions) {
-    this.http = got.extend({
-      prefixUrl: `${options.baseUrl.replace(/\/$/, '')}/console/v1`,
-      cookieJar: new CookieJar(),
-      timeout: { request: options.timeoutMs },
-      retry: { limit: 0 },
-      responseType: 'json',
-      headers: {
-        accept: 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9',
-        'content-type': 'application/json',
-        language: 'zh-cn',
-        origin: options.baseUrl,
-        referer: options.loginUrl,
-        'user-agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
-      },
-      hooks: {
-        beforeRequest: [
-          (request) => {
-            if (this.jwt) {
-              request.headers.authorization = `Bearer ${this.jwt}`;
-            }
-          },
-        ],
-      },
-    });
+    /* v8 ignore next -- production got client wiring is excluded from unit coverage. */
+    this.http = options.http ?? createGotClient(options, () => this.jwt);
   }
 
   async login(username: string, password: string): Promise<SvyunLoginResult> {
@@ -130,6 +116,37 @@ export class SvyunClient implements SvyunClientLike {
 export function encryptPassword(password: string): string {
   const cipher = createCipheriv('aes-128-cbc', Buffer.from(AES_KEY), Buffer.from(AES_IV));
   return Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]).toString('base64');
+}
+
+/* v8 ignore next 29 -- got/tough-cookie wiring is verified by integration usage, not unit-tested with real network. */
+function createGotClient(options: SvyunClientOptions, getJwt: () => string | undefined): Got {
+  return got.extend({
+    prefixUrl: `${options.baseUrl.replace(/\/$/, '')}/console/v1`,
+    cookieJar: new CookieJar(),
+    timeout: { request: options.timeoutMs },
+    retry: { limit: 0 },
+    responseType: 'json',
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      'accept-language': 'zh-CN,zh;q=0.9',
+      'content-type': 'application/json',
+      language: 'zh-cn',
+      origin: options.baseUrl,
+      referer: options.loginUrl,
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+    },
+    hooks: {
+      beforeRequest: [
+        (request) => {
+          const jwt = getJwt();
+          if (jwt) {
+            request.headers.authorization = `Bearer ${jwt}`;
+          }
+        },
+      ],
+    },
+  });
 }
 
 function createDeviceId(): string {

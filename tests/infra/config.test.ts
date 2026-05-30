@@ -62,4 +62,27 @@ describe('loadConfig', () => {
       expect(String(error)).not.toContain('123456:telegram-token');
     }
   });
+
+  it('fails when required Telegram secrets are missing', () => {
+    expect(() => loadConfig({})).toThrow(/TELEGRAM_BOT_TOKEN/);
+  });
+
+  it('fails when a username value is empty', () => {
+    expect(() =>
+      loadConfig({
+        ...telegramEnv,
+        SVYUN_USERNAME_MAIN: '',
+        SVYUN_PASSWORD_MAIN: 'main-password',
+      }),
+    ).toThrow(/SVYUN_USERNAME_MAIN/);
+  });
+
+  it('ignores empty username suffixes', () => {
+    expect(() =>
+      loadConfig({
+        ...telegramEnv,
+        SVYUN_USERNAME_: 'ignored@example.com',
+      }),
+    ).toThrow(/SVYUN_USERNAME_<ID>/);
+  });
 });
