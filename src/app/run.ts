@@ -49,5 +49,5 @@ function formatWorkflowFailureMessage(result: WorkflowResult): string {
 
 function formatFailureMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return ['SvYun 自动签到失败', '', `原因：${message}`].join('\n');
+  return ['速维云自动签到失败', '', `原因：${message}`].join('\n');
 }

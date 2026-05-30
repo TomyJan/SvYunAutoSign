@@ -30,7 +30,7 @@ describe('formatTelegramMessage', () => {
   it('formats all account results as plain text', () => {
     const message = formatTelegramMessage(result);
 
-    expect(message).toContain('SvYun 自动签到结果：部分失败');
+    expect(message).toContain('速维云自动签到结果：部分失败');
     expect(message).toContain('主号（m***@example.com）');
     expect(message).toContain('✅ login：登录成功');
     expect(message).toContain('⏭️ draw：无可用抽奖次数');
