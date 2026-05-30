@@ -1,6 +1,10 @@
+import { X509Certificate } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 
 interface GotExtendOptions {
+  https?: {
+    certificateAuthority?: string[];
+  };
   hooks: {
     beforeRequest: Array<(request: { headers: Record<string, string> }) => void>;
   };
@@ -136,6 +140,14 @@ describe('SvyunClient', () => {
         retry: { limit: 0 },
         responseType: 'json',
       }),
+    );
+    const certificateAuthority = gotMock.options.https?.certificateAuthority;
+    expect(certificateAuthority).toHaveLength(2);
+    expect(new X509Certificate(certificateAuthority![0]!).subject).toContain(
+      'CN=SSL.com TLS Issuing RSA CA R1',
+    );
+    expect(new X509Certificate(certificateAuthority![1]!).subject).toContain(
+      'CN=SSL.com TLS RSA Root CA 2022',
     );
 
     const options = gotMock.options;
