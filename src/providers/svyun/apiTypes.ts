@@ -18,6 +18,8 @@ export interface SvyunSignInfo {
   alreadySigned: boolean;
   totalCheckins?: number;
   currentStreak?: number;
+  missedDays?: number;
+  drawBonusTimes?: number;
   message: string;
 }
 
@@ -27,6 +29,8 @@ export interface SvyunSignResult {
   message: string;
   checkinCount?: number;
   currentStreak?: number;
+  missedDays?: number;
+  drawBonusTimes?: number;
 }
 
 export interface SvyunDrawTimes {
@@ -42,6 +46,18 @@ export interface SvyunDrawResult {
   isWin?: boolean;
   prizeName?: string;
   message: string;
+}
+
+export interface SvyunDrawPrizeSummary {
+  name: string;
+  count: number;
+  isWin: boolean;
+}
+
+export interface SvyunDrawSummary {
+  totalDraws: number;
+  prizes: SvyunDrawPrizeSummary[];
+  hasPrizeWin: boolean;
 }
 
 export interface SvyunClientLike {

@@ -8,6 +8,26 @@ import type {
   SvyunSignResult,
 } from './apiTypes.js';
 
+type SvyunSignInfoData = {
+  today_checked?: boolean;
+  total_checkins?: number;
+  current_streak?: number;
+};
+
+type SvyunSignRewardResultData = {
+  times?: number | string;
+};
+
+type SvyunSignRecordData = {
+  checkin_count?: number;
+  current_streak?: number;
+  break_days?: number;
+  reward_info?: {
+    basic?: { results?: SvyunSignRewardResultData[] };
+    streak?: SvyunSignRewardResultData[];
+  };
+};
+
 export function mapLoginResult(response: SvyunApiResponse<SvyunLoginData>): SvyunLoginResult {
   const success = response.status === 200 && Boolean(response.data?.jwt);
   return {
@@ -19,21 +39,23 @@ export function mapLoginResult(response: SvyunApiResponse<SvyunLoginData>): Svyu
 
 export function mapSignInfo(response: SvyunApiResponse): SvyunSignInfo {
   const data = response.data as
-    | { info?: { today_checked?: boolean; total_checkins?: number; current_streak?: number } }
+    | { info?: SvyunSignInfoData; records?: SvyunSignRecordData[] }
     | undefined;
   const info = data?.info;
+  const latestRecord = data?.records?.[0];
   const alreadySigned = info?.today_checked === true;
 
   return {
     alreadySigned,
     ...(typeof info?.total_checkins === 'number' ? { totalCheckins: info.total_checkins } : {}),
     ...(typeof info?.current_streak === 'number' ? { currentStreak: info.current_streak } : {}),
+    ...mapSignDetails(latestRecord),
     message: alreadySigned ? '今日已签到' : '今日未签到',
   };
 }
 
 export function mapSignResult(response: SvyunApiResponse): SvyunSignResult {
-  const data = response.data as { checkin_count?: number; current_streak?: number } | undefined;
+  const data = response.data as SvyunSignRecordData | undefined;
   const alreadySigned = /已签/.test(response.msg ?? '');
   const success = response.status === 200 || alreadySigned;
 
@@ -43,7 +65,28 @@ export function mapSignResult(response: SvyunApiResponse): SvyunSignResult {
     message: response.msg || (success ? '签到成功' : '签到失败'),
     ...(typeof data?.checkin_count === 'number' ? { checkinCount: data.checkin_count } : {}),
     ...(typeof data?.current_streak === 'number' ? { currentStreak: data.current_streak } : {}),
+    ...mapSignDetails(data),
   };
+}
+
+function mapSignDetails(record: SvyunSignRecordData | undefined) {
+  return {
+    ...(typeof record?.break_days === 'number' ? { missedDays: record.break_days } : {}),
+    ...mapDrawBonusTimes(record),
+  };
+}
+
+function mapDrawBonusTimes(record: SvyunSignRecordData | undefined) {
+  const rewardResults = [
+    ...(record?.reward_info?.basic?.results ?? []),
+    ...(record?.reward_info?.streak ?? []),
+  ];
+  const drawBonusTimes = rewardResults.reduce(
+    (total, reward) => total + Number(reward.times ?? 0),
+    0,
+  );
+
+  return drawBonusTimes > 0 ? { drawBonusTimes } : {};
 }
 
 export function mapDrawTimes(response: SvyunApiResponse): SvyunDrawTimes {

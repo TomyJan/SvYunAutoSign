@@ -38,6 +38,86 @@ describe('svyun mapper', () => {
     });
   });
 
+  it('maps checkin detail fields from info records and rewards', () => {
+    expect(
+      mapSignInfo({
+        status: 200,
+        msg: '成功',
+        data: {
+          info: {
+            today_checked: true,
+            total_checkins: 18,
+            current_streak: 1,
+          },
+          records: [
+            {
+              checkin_count: 18,
+              current_streak: 1,
+              break_days: 3,
+              reward_info: {
+                basic: {
+                  type: 'selected',
+                  results: [{ activity_id: 2, activity_name: '长期抽奖活动', times: 1 }],
+                },
+                streak: [],
+              },
+            },
+          ],
+        },
+      }),
+    ).toEqual({
+      alreadySigned: true,
+      totalCheckins: 18,
+      currentStreak: 1,
+      missedDays: 3,
+      drawBonusTimes: 1,
+      message: '今日已签到',
+    });
+
+    expect(
+      mapSignResult({
+        status: 200,
+        msg: '签到成功',
+        data: {
+          checkin_count: 18,
+          current_streak: 2,
+          break_days: 0,
+          reward_info: {
+            basic: { type: 'selected', results: [] },
+            streak: [{ activity_id: 2, activity_name: '长期抽奖活动', times: 3 }],
+          },
+        },
+      }),
+    ).toEqual({
+      success: true,
+      alreadySigned: false,
+      message: '签到成功',
+      checkinCount: 18,
+      currentStreak: 2,
+      missedDays: 0,
+      drawBonusTimes: 3,
+    });
+  });
+
+  it('ignores reward records without draw times', () => {
+    expect(
+      mapSignResult({
+        status: 200,
+        msg: '签到成功',
+        data: {
+          reward_info: {
+            basic: { results: [{}] },
+            streak: [{}],
+          },
+        },
+      }),
+    ).toEqual({
+      success: true,
+      alreadySigned: false,
+      message: '签到成功',
+    });
+  });
+
   it('maps checkin response', () => {
     expect(
       mapSignResult({
