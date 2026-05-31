@@ -96,4 +96,55 @@ describe('runAccountsWorkflow', () => {
 
     expect(result.accounts[0]?.stages[0]?.message).toBe('plain failure');
   });
+
+  it('logs account progress while running accounts serially', async () => {
+    const info = vi.fn<(message: string) => void>();
+    const runner = {
+      run: vi.fn((account: SvyunAccount) =>
+        Promise.resolve({
+          accountId: account.id,
+          accountName: account.displayName,
+          usernameMasked: account.usernameMasked,
+          success: account.id !== 'ALT',
+          stages: [
+            {
+              name: 'sign',
+              success: account.id !== 'ALT',
+              message: account.id === 'ALT' ? '签到失败' : '签到成功',
+            },
+          ],
+        }),
+      ),
+    };
+
+    await runAccountsWorkflow(accounts, runner, { info });
+
+    expect(info.mock.calls.map(([message]) => message)).toEqual([
+      '开始执行速维云自动签到，共 2 个账号',
+      '开始执行账号 1/2：主号（m***@example.com）',
+      '账号执行成功：主号（m***@example.com）',
+      '开始执行账号 2/2：小号（a***@example.com）',
+      '账号执行失败：小号（a***@example.com）：sign：签到失败',
+      '速维云自动签到执行完成：1/2 成功',
+    ]);
+  });
+
+  it('logs unknown error when a failed account has no failed stages', async () => {
+    const info = vi.fn<(message: string) => void>();
+    const runner = {
+      run: vi.fn((account: SvyunAccount) =>
+        Promise.resolve({
+          accountId: account.id,
+          accountName: account.displayName,
+          usernameMasked: account.usernameMasked,
+          success: false,
+          stages: [{ name: 'login', success: true, message: '登录成功' }],
+        }),
+      ),
+    };
+
+    await runAccountsWorkflow([accounts[0]!], runner, { info });
+
+    expect(info).toHaveBeenCalledWith('账号执行失败：主号（m***@example.com）：未知错误');
+  });
 });

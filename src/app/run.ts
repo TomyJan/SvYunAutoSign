@@ -3,27 +3,32 @@ import type { WorkflowResult } from '../core/task.js';
 import { redactSensitive } from '../infra/redact.js';
 import { formatTelegramMessage } from '../providers/telegram/messageFormatter.js';
 
+export interface AppLogger {
+  info(message: string): void;
+}
+
 export interface RunAppDependencies {
   workflow(): Promise<WorkflowResult>;
   notifier: NotificationProvider;
   secrets?: readonly string[];
+  logger?: AppLogger;
 }
 
 export async function runApp(dependencies: RunAppDependencies): Promise<void> {
   try {
     const result = await dependencies.workflow();
-    await dependencies.notifier.send(
-      redactSensitive(formatTelegramMessage(result), dependencies.secrets),
-    );
+    const message = redactSensitive(formatTelegramMessage(result), dependencies.secrets);
+    dependencies.logger?.info(message);
+    await dependencies.notifier.send(message);
 
     if (!result.success) {
       throw new Error(formatWorkflowFailureMessage(result));
     }
   } catch (error) {
     if (isWorkflowFailureBeforeNotification(error)) {
-      await dependencies.notifier.send(
-        redactSensitive(formatFailureMessage(error), dependencies.secrets),
-      );
+      const message = redactSensitive(formatFailureMessage(error), dependencies.secrets);
+      dependencies.logger?.info(message);
+      await dependencies.notifier.send(message);
     }
     throw error;
   }

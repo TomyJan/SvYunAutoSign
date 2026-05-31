@@ -123,4 +123,45 @@ describe('runApp', () => {
     await expect(runApp({ workflow, notifier })).rejects.toBe('string boom');
     expect(send).toHaveBeenCalledWith(expect.stringContaining('string boom'));
   });
+
+  it('logs redacted formatted workflow result before sending notification', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const info = vi.fn();
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue({
+      success: false,
+      accounts: [
+        {
+          accountId: 'MAIN',
+          accountName: '主号',
+          usernameMasked: 'm***@example.com',
+          success: false,
+          stages: [{ name: 'sign', success: false, message: 'password=qwer123456' }],
+        },
+      ],
+    });
+
+    await expect(
+      runApp({ workflow, notifier, secrets: ['qwer123456'], logger: { info } }),
+    ).rejects.toThrow(/部分账号执行失败/);
+
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('📋 速维云自动签到结果'));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('password=***'));
+    expect(info).not.toHaveBeenCalledWith(expect.stringContaining('qwer123456'));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('password=***'));
+  });
+
+  it('logs redacted failure message when workflow throws before producing a result', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const info = vi.fn();
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockRejectedValue(new Error('password=qwer123456'));
+
+    await expect(
+      runApp({ workflow, notifier, secrets: ['qwer123456'], logger: { info } }),
+    ).rejects.toThrow(/password=qwer123456/);
+
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('速维云自动签到失败'));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('password=***'));
+  });
 });

@@ -56,5 +56,29 @@ describe('createApp', () => {
 
     await expect(app.workflow()).resolves.toMatchObject({ accountId: 'MAIN', success: true });
     expect(workflowMock.runAccountsWorkflow).toHaveBeenCalledTimes(1);
+    expect(workflowMock.runAccountsWorkflow).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Object),
+      app.logger,
+    );
+  });
+
+  it('creates a console logger that redacts configured secrets', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    try {
+      const app = createApp({
+        SVYUN_USERNAME_MAIN: 'main@example.com',
+        SVYUN_PASSWORD_MAIN: 'main-password',
+        TELEGRAM_BOT_TOKEN: '123456:telegram-token',
+        TELEGRAM_CHAT_ID: '42',
+      });
+
+      app.logger.info('token=123456:telegram-token password=main-password');
+
+      expect(log).toHaveBeenCalledWith('token=*** password=***');
+    } finally {
+      log.mockRestore();
+    }
   });
 });
