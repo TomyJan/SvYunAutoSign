@@ -8,7 +8,11 @@ import type { NotificationProvider } from '../core/notification.js';
 import type { WorkflowResult } from '../core/task.js';
 import type { AppLogger } from './run.js';
 
+const CONNECTIVITY_CHECK_RETRIES = 3;
+const CONNECTIVITY_CHECK_RETRY_DELAY_MS = 3_000;
+
 export interface AppDependencies {
+  precheck(): Promise<void>;
   workflow(): Promise<WorkflowResult>;
   notifier: NotificationProvider;
   secrets: readonly string[];
@@ -36,10 +40,38 @@ export function createApp(env: NodeJS.ProcessEnv = process.env): AppDependencies
     },
   };
 
+  const precheckClient = new SvyunClient({
+    baseUrl: config.defaults.baseUrl,
+    loginUrl: config.defaults.loginUrl,
+    timeoutMs: config.defaults.requestTimeoutMs,
+  });
+
   return {
+    precheck: async () => {
+      for (let attempt = 1; attempt <= CONNECTIVITY_CHECK_RETRIES; attempt += 1) {
+        logger?.info(`检查网站连接（${attempt}/${CONNECTIVITY_CHECK_RETRIES}）`);
+        const connected = await precheckClient.checkConnectivity();
+        if (connected) {
+          logger?.info('网站连接正常');
+          return;
+        }
+        if (attempt < CONNECTIVITY_CHECK_RETRIES) {
+          await delay(CONNECTIVITY_CHECK_RETRY_DELAY_MS);
+        }
+      }
+      throw new Error(
+        `无法连接到 ${config.defaults.baseUrl}（已重试 ${CONNECTIVITY_CHECK_RETRIES} 次）`,
+      );
+    },
     workflow: () => runAccountsWorkflow(config.svyun.accounts, runner, logger),
     notifier: new TelegramNotifier(config.telegram),
     secrets,
     logger,
   };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }

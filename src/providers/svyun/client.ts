@@ -108,10 +108,25 @@ const SSL_DOT_COM_CA_CHAIN = [SSL_DOT_COM_TLS_ISSUING_RSA_CA_R1, SSL_DOT_COM_TLS
 
 export class SvyunClient implements SvyunClientLike {
   private readonly http: SvyunHttpLike;
+  private readonly baseUrl: string;
   private jwt: string | undefined;
 
   constructor(options: SvyunClientOptions) {
+    this.baseUrl = options.baseUrl;
     this.http = options.http ?? createGotClient(options, () => this.jwt);
+  }
+
+  async checkConnectivity(): Promise<boolean> {
+    try {
+      await got.head(this.baseUrl, {
+        timeout: { request: 10_000 },
+        throwHttpErrors: false,
+        https: { certificateAuthority: SSL_DOT_COM_CA_CHAIN },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async login(username: string, password: string): Promise<SvyunLoginResult> {

@@ -16,9 +16,11 @@ const gotMock = vi.hoisted(() => {
     options = nextOptions;
     return { get: vi.fn(), post: vi.fn() };
   });
+  const head = vi.fn().mockResolvedValue({ statusCode: 200 });
 
   return {
     extend,
+    head,
     get options() {
       if (!options) throw new Error('got.extend was not called');
       return options;
@@ -27,7 +29,7 @@ const gotMock = vi.hoisted(() => {
 });
 
 vi.mock('got', () => ({
-  default: { extend: gotMock.extend },
+  default: { extend: gotMock.extend, head: gotMock.head },
 }));
 
 import {
@@ -90,6 +92,9 @@ describe('SvyunClient', () => {
       http,
     });
 
+    await expect(client.checkConnectivity()).resolves.toBe(true);
+    expect(gotMock.head).toHaveBeenCalledWith('https://www.svyun.com', expect.any(Object));
+
     await expect(client.login('user@example.com', 'qwer123456')).resolves.toMatchObject({
       success: true,
     });
@@ -107,6 +112,19 @@ describe('SvyunClient', () => {
       'GET lucky_draw/getDrawTimesInfo',
       'POST lucky_draw/draw',
     ]);
+  });
+
+  it('returns false when connectivity check fails', async () => {
+    gotMock.head.mockRejectedValueOnce(new Error('Timeout awaiting request'));
+
+    const client = new SvyunClient({
+      baseUrl: 'https://www.svyun.com',
+      loginUrl: 'https://www.svyun.com/login.htm',
+      timeoutMs: 30_000,
+      http: { get: vi.fn(), post: vi.fn() },
+    });
+
+    await expect(client.checkConnectivity()).resolves.toBe(false);
   });
 
   it('creates a got client when no HTTP transport is injected', () => {

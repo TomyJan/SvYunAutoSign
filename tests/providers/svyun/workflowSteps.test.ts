@@ -13,6 +13,7 @@ const account: SvyunAccount = {
 describe('SvyunAccountTaskRunner', () => {
   it('runs login, sign and draw stages', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: false, message: '未签' }),
       sign: vi.fn().mockResolvedValue({
@@ -47,6 +48,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('treats already signed and no draw times as successful skipped states', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: true, message: '今日已签到' }),
       sign: vi.fn(),
@@ -80,6 +82,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('stops after login failure', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: false, message: '账号或密码错误' }),
       getSignInfo: vi.fn(),
       sign: vi.fn(),
@@ -97,6 +100,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('stops when sign fails', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: false, message: '未签' }),
       sign: vi
@@ -125,6 +129,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('draws until all available draw times are consumed and records prizes', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: true, message: '今日已签到' }),
       sign: vi.fn(),
@@ -181,6 +186,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('stops drawing and records partial summary when a draw fails', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: true, message: '今日已签到' }),
       sign: vi.fn(),
@@ -230,6 +236,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('uses an unknown prize label when draw result has no prize name or message', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: true, message: '今日已签到' }),
       sign: vi.fn(),
@@ -257,6 +264,7 @@ describe('SvyunAccountTaskRunner', () => {
 
   it('skips draw when no activity is available', async () => {
     const client = {
+      checkConnectivity: vi.fn().mockResolvedValue(true),
       login: vi.fn().mockResolvedValue({ success: true, message: '登录成功', jwt: 'token' }),
       getSignInfo: vi.fn().mockResolvedValue({ alreadySigned: false, message: '未签' }),
       sign: vi.fn().mockResolvedValue({ success: true, alreadySigned: false, message: '签到成功' }),

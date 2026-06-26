@@ -61,6 +61,7 @@ export interface SvyunDrawSummary {
 }
 
 export interface SvyunClientLike {
+  checkConnectivity(): Promise<boolean>;
   login(username: string, password: string): Promise<SvyunLoginResult>;
   getSignInfo(): Promise<SvyunSignInfo>;
   sign(): Promise<SvyunSignResult>;

@@ -72,18 +72,18 @@ describe('runAccountsWorkflow', () => {
 
     const result = await runAccountsWorkflow(accounts, runner);
 
-    expect(runner.run).toHaveBeenCalledTimes(2);
+    expect(runner.run).toHaveBeenCalledTimes(3);
     expect(result.success).toBe(false);
     expect(result.accounts).toHaveLength(2);
     expect(result.accounts[0]).toMatchObject({
       accountId: 'MAIN',
       success: false,
-      stages: [{ name: 'account', success: false, message: 'login failed' }],
+      stages: [{ name: 'account', success: false, message: 'login failed（重试后仍失败）' }],
     });
     expect(result.accounts[1]).toMatchObject({ accountId: 'ALT', success: true });
   });
 
-  it('records non-error thrown values as failed account messages', async () => {
+  it('records non-error thrown values as failed account messages after retry', async () => {
     const runner = {
       run: vi.fn(async () => {
         await Promise.resolve();
@@ -94,7 +94,47 @@ describe('runAccountsWorkflow', () => {
 
     const result = await runAccountsWorkflow([accounts[0]!], runner);
 
-    expect(result.accounts[0]?.stages[0]?.message).toBe('plain failure');
+    expect(runner.run).toHaveBeenCalledTimes(2);
+    expect(result.accounts[0]?.stages[0]?.message).toBe('plain failure（重试后仍失败）');
+  });
+
+  it('retries once and succeeds when the first attempt throws', async () => {
+    let callCount = 0;
+    const runner = {
+      run: vi.fn((account: SvyunAccount) => {
+        callCount += 1;
+        if (callCount === 1) {
+          return Promise.reject(new Error('timeout'));
+        }
+        return Promise.resolve({
+          accountId: account.id,
+          accountName: account.displayName,
+          usernameMasked: account.usernameMasked,
+          success: true,
+          stages: [{ name: 'login', success: true, message: '登录成功' }],
+        });
+      }),
+    };
+
+    const result = await runAccountsWorkflow([accounts[0]!], runner);
+
+    expect(runner.run).toHaveBeenCalledTimes(2);
+    expect(result.success).toBe(true);
+    expect(result.accounts[0]).toMatchObject({ accountId: 'MAIN', success: true });
+  });
+
+  it('logs retry attempt when account task throws', async () => {
+    const info = vi.fn<(message: string) => void>();
+    const runner = {
+      run: vi.fn(() => {
+        return Promise.reject(new Error('network error'));
+      }),
+    };
+
+    await runAccountsWorkflow([accounts[0]!], runner, { info });
+
+    expect(info).toHaveBeenCalledWith('账号执行出错，正在重试：主号（m***@example.com）');
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('重试后仍失败'));
   });
 
   it('logs account progress while running accounts serially', async () => {

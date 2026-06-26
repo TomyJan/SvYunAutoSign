@@ -8,6 +8,7 @@ export interface AppLogger {
 }
 
 export interface RunAppDependencies {
+  precheck?(): Promise<void>;
   workflow(): Promise<WorkflowResult>;
   notifier: NotificationProvider;
   secrets?: readonly string[];
@@ -16,6 +17,7 @@ export interface RunAppDependencies {
 
 export async function runApp(dependencies: RunAppDependencies): Promise<void> {
   try {
+    await dependencies.precheck?.();
     const result = await dependencies.workflow();
     const message = redactSensitive(formatTelegramMessage(result), dependencies.secrets);
     dependencies.logger?.info(message);

@@ -22,29 +22,34 @@ export async function runAccountsWorkflow(
     const accountLabel = `${account.displayName}（${account.usernameMasked}）`;
     logger?.info(`开始执行账号 ${index + 1}/${accounts.length}：${accountLabel}`);
 
+    let result: AccountRunResult;
     try {
-      const result = await runner.run(account);
-      results.push(result);
-      if (result.success) {
-        logger?.info(`账号执行成功：${accountLabel}`);
-      } else {
-        logger?.info(`账号执行失败：${accountLabel}：${formatFailedStages(result)}`);
+      result = await runner.run(account);
+    } catch {
+      logger?.info(`账号执行出错，正在重试：${accountLabel}`);
+      try {
+        result = await runner.run(account);
+      } catch (retryError) {
+        const message = retryError instanceof Error ? retryError.message : String(retryError);
+        result = {
+          accountId: account.id,
+          accountName: account.displayName,
+          usernameMasked: account.usernameMasked,
+          success: false,
+          stages: [
+            {
+              name: 'account',
+              success: false,
+              message: `${message}（重试后仍失败）`,
+            },
+          ],
+        };
       }
-    } catch (error) {
-      const result = {
-        accountId: account.id,
-        accountName: account.displayName,
-        usernameMasked: account.usernameMasked,
-        success: false,
-        stages: [
-          {
-            name: 'account',
-            success: false,
-            message: error instanceof Error ? error.message : String(error),
-          },
-        ],
-      } satisfies AccountRunResult;
-      results.push(result);
+    }
+    results.push(result);
+    if (result.success) {
+      logger?.info(`账号执行成功：${accountLabel}`);
+    } else {
       logger?.info(`账号执行失败：${accountLabel}：${formatFailedStages(result)}`);
     }
   }

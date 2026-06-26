@@ -21,6 +21,9 @@ vi.mock('../../src/core/workflow.js', () => ({
 vi.mock('../../src/providers/svyun/client.js', () => ({
   SvyunClient: vi.fn(function SvyunClient() {
     return {
+      checkConnectivity() {
+        return Promise.resolve(true);
+      },
       login() {
         return Promise.resolve({ success: true, message: '登录成功', jwt: 'jwt-token' });
       },
@@ -79,6 +82,59 @@ describe('createApp', () => {
       expect(log).toHaveBeenCalledWith('token=*** password=***');
     } finally {
       log.mockRestore();
+    }
+  });
+
+  it('precheck succeeds when connectivity check passes', async () => {
+    const app = createApp({
+      SVYUN_USERNAME_MAIN: 'main@example.com',
+      SVYUN_PASSWORD_MAIN: 'main-password',
+      TELEGRAM_BOT_TOKEN: '123456:telegram-token',
+      TELEGRAM_CHAT_ID: '42',
+    });
+
+    await expect(app.precheck()).resolves.toBeUndefined();
+  });
+
+  it('precheck throws after exhausting connectivity retries', async () => {
+    const { SvyunClient } = await import('../../src/providers/svyun/client.js');
+    const mockSvyunClient = vi.mocked(SvyunClient);
+
+    mockSvyunClient.mockImplementation(function FailingClient() {
+      return {
+        checkConnectivity: () => Promise.resolve(false),
+        login: vi.fn(),
+        getSignInfo: vi.fn(),
+        sign: vi.fn(),
+        getPrimaryDrawActivityId: vi.fn(),
+        getDrawTimes: vi.fn(),
+        draw: vi.fn(),
+      } as unknown as InstanceType<typeof SvyunClient>;
+    });
+
+    vi.useFakeTimers();
+
+    try {
+      const app = createApp({
+        SVYUN_USERNAME_MAIN: 'main@example.com',
+        SVYUN_PASSWORD_MAIN: 'main-password',
+        TELEGRAM_BOT_TOKEN: '123456:telegram-token',
+        TELEGRAM_CHAT_ID: '42',
+      });
+
+      let caughtError: unknown;
+      const precheckPromise = app.precheck().catch((error: unknown) => {
+        caughtError = error;
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await precheckPromise;
+
+      expect(caughtError).toBeInstanceOf(Error);
+      expect((caughtError as Error).message).toMatch(/无法连接到.*已重试 3 次/);
+    } finally {
+      vi.useRealTimers();
+      mockSvyunClient.mockReset();
     }
   });
 });

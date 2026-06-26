@@ -73,6 +73,42 @@ describe('runApp', () => {
     await expect(runApp({ workflow, notifier })).rejects.toThrow(/主号[\s\S]*未知错误/);
   });
 
+  it('runs precheck before workflow when provided', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue(successResult);
+    const precheck = vi.fn().mockResolvedValue(undefined);
+
+    await runApp({ precheck, workflow, notifier });
+
+    expect(precheck).toHaveBeenCalledOnce();
+    expect(workflow).toHaveBeenCalledOnce();
+    expect(precheck).toHaveBeenCalledBefore(workflow);
+  });
+
+  it('sends failure notification when precheck throws', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue(successResult);
+    const precheck = vi.fn().mockRejectedValue(new Error('无法连接到网站（已重试 3 次）'));
+
+    await expect(runApp({ precheck, workflow, notifier })).rejects.toThrow(/无法连接到网站/);
+    expect(workflow).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('速维云自动签到失败'));
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('无法连接到网站'));
+  });
+
+  it('skips precheck when not provided', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier: NotificationProvider = { name: 'telegram', send };
+    const workflow = vi.fn().mockResolvedValue(successResult);
+
+    await runApp({ workflow, notifier });
+
+    expect(workflow).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(expect.stringContaining('全部成功'));
+  });
+
   it('sends failure notification when workflow throws', async () => {
     const send = vi.fn().mockResolvedValue(undefined);
     const notifier: NotificationProvider = { name: 'telegram', send };
