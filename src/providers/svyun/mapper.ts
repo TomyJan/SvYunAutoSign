@@ -39,8 +39,7 @@ export function mapLoginResult(response: SvyunApiResponse<SvyunLoginData>): Svyu
 
 export function mapSignInfo(response: SvyunApiResponse): SvyunSignInfo {
   const data = response.data as
-    | { info?: SvyunSignInfoData; records?: SvyunSignRecordData[] }
-    | undefined;
+    { info?: SvyunSignInfoData; records?: SvyunSignRecordData[] } | undefined;
   const info = data?.info;
   const latestRecord = data?.records?.[0];
   const alreadySigned = info?.today_checked === true;
@@ -91,8 +90,7 @@ function mapDrawBonusTimes(record: SvyunSignRecordData | undefined) {
 
 export function mapDrawTimes(response: SvyunApiResponse): SvyunDrawTimes {
   const data = response.data as
-    | { available_times?: number | string; used_times?: number | string }
-    | undefined;
+    { available_times?: number | string; used_times?: number | string } | undefined;
   const availableTimes = Number(data?.available_times ?? 0);
   const usedTimes = Number(data?.used_times ?? 0);
 
