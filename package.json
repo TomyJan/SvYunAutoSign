@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@typescript/native": "npm:typescript@latest",
     "@types/node": "latest",
     "@vitest/coverage-v8": "latest",
     "eslint": "latest",
@@ -43,7 +44,7 @@
     "prettier": "latest",
     "simple-git-hooks": "latest",
     "tsx": "latest",
-    "typescript": "latest",
+    "typescript": "npm:@typescript/typescript6@latest",
     "typescript-eslint": "latest",
     "vitest": "latest"
   },
